@@ -1,0 +1,176 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>tech.nveces.jvmoom</groupId>
+  <artifactId>jvm-oom-lab</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <name>jvm-oom-lab</name>
+  <description>Lab: JVM OutOfMemoryError probe</description>
+
+  <properties>
+    <!-- maven exclusive properties -->
+    <maven.test.skip>false</maven.test.skip>
+    <maven.test.failure.ignore>true</maven.test.failure.ignore>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.build.timestamp.format>yyyy-MM-dd_HH:mm:ss</maven.build.timestamp.format>
+    <createChecksum>true</createChecksum>
+    <!-- Old way Before Java 9 -->
+    <java.source.version>17</java.source.version>
+    <java.target.version>17</java.target.version>
+    <!-- New way After Java 9 -->
+    <maven.compiler.release>17</maven.compiler.release>
+    <!--
+    <maven.compiler.release>21</maven.compiler.release>
+    <maven.compiler.release>25</maven.compiler.release>
+    -->
+    <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+    <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+    <maven-assembly-plugin.version>3.7.1</maven-assembly-plugin.version>
+    <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
+    <build-helper-maven-plugin.version>3.0.0</build-helper-maven-plugin.version>
+    <!-- ===================== -->
+    <!-- Dependencies versions -->
+    <!-- ================= -->
+    <!-- Others properties -->
+    <main.class>tech.nveces.jvmoom.JvmOomMain</main.class>
+    <oom.scenario.01>heap-space</oom.scenario.01>
+    <oom.scenario.02>metaspace</oom.scenario.02>
+    <oom.scenario.03>unable-create-thread</oom.scenario.03>
+    <oom.scenario.04>direct-buffer</oom.scenario.04>
+    <oom.scenario.05>requested-array-size</oom.scenario.05>
+    <oom.scenario.06>gc-overhead</oom.scenario.06>
+    <oom.scenario>${oom.scenario.06}</oom.scenario>
+    <!-- -->
+    <oom.jvm.xms>128m</oom.jvm.xms>
+    <oom.jvm.xmx>128m</oom.jvm.xmx>
+    <oom.jvm.xss>-Xss256k</oom.jvm.xss>
+    <oom.jvm.extra1>-XX:+ExitOnOutOfMemoryError</oom.jvm.extra1>
+    <oom.jvm.extra2>-XX:+HeapDumpOnOutOfMemoryError</oom.jvm.extra2>
+    <oom.jvm.extra3>-XX:+CrashOnOutOfMemoryError</oom.jvm.extra3>
+    <oom.jvm.extra4>-XX:ErrorFile=${project.build.directory}/hs_err_pid%p.log</oom.jvm.extra4>
+    <oom.jvm.extra5>-XX:+UseGCOverheadLimit</oom.jvm.extra5>
+    <oom.jvm.extra6>-XX:GCTimeLimit=90</oom.jvm.extra6>
+    <oom.jvm.extra7>-XX:GCHeapFreeLimit=5</oom.jvm.extra7>
+    <oom.jvm-meta>-XX:MaxMetaspaceSize=64m</oom.jvm-meta>
+    <oom.heapdump.path>${project.build.directory}</oom.heapdump.path>
+  </properties>
+  <developers>
+    <developer>
+      <name>Nveces</name>
+      <email>nveces@gmail.com</email>
+      <organization>Nveces Tech</organization>
+      <organizationUrl>https://nveces.com/</organizationUrl>
+      <roles>
+        <role>Developer</role>
+      </roles>
+      <timezone />
+    </developer>
+  </developers>
+  <build>
+    <plugins>
+      <plugin>
+        <!-- create the source assemblies -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>${maven-assembly-plugin.version}</version>
+        <configuration>
+          <descriptors>
+            <descriptor>src/main/assembly/src.xml</descriptor>
+          </descriptors>
+          <tarLongFileMode>gnu</tarLongFileMode>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id> <!-- this is used for inheritance merges -->
+            <phase>package</phase> <!-- bind to the packaging phase -->
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven-compiler-plugin.version}</version>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+            <!--
+<arg>-Xlint:unchecked</arg>
+<arg>-Xlint:deprecated</arg>
+-->
+          </compilerArgs>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>${maven-jar-plugin.version}</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>${main.class}</mainClass>
+            </manifest>
+            <manifestEntries>
+              <Created-By>Nveces Tech</Created-By>
+              <BuildTime>${build.timestamp}</BuildTime>
+              <Implementation-BuildTime>${maven.build.timestamp}</Implementation-BuildTime>
+              <version-app>${project.version}</version-app>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <profiles>
+    <profile>
+      <id>oom</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>${exec-maven-plugin.version}</version>
+            <configuration>
+              <executable>java</executable>
+              <arguments>
+                <argument>-Xms${oom.jvm.xms}</argument>
+                <argument>-Xmx${oom.jvm.xmx}</argument>
+                <!-- <argument>${oom.jvm.xss}</argument> -->
+                <argument>${oom.jvm-meta}</argument>
+                <argument>${oom.jvm.extra1}</argument>
+                <argument>${oom.jvm.extra2}</argument>
+                <argument>-XX:HeapDumpPath=${oom.heapdump.path}</argument>
+                <argument>-XX:MaxDirectMemorySize=128m</argument>
+                <argument>${oom.jvm.extra3}</argument>
+                <argument>${oom.jvm.extra4}</argument>
+                <argument>${oom.jvm.extra5}</argument>
+                <argument>${oom.jvm.extra6}</argument>
+                <argument>${oom.jvm.extra7}</argument>
+                <argument>-classpath</argument>
+                <classpath />
+                <argument>${main.class}</argument>
+                <argument>${oom.scenario}</argument>
+              </arguments>
+            </configuration>
+            <executions>
+              <execution>
+                <id>run-oom-scenario</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
