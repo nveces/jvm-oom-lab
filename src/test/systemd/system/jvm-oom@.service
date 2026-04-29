@@ -1,0 +1,56 @@
+
+# https://www.freedesktop.org/software/systemd/man/systemd.exec.html
+# https://www.freedesktop.org/software/systemd/man/systemd.service.html
+# https://dev.mysql.com/doc/refman/5.7/en/mysqld-safe.html
+#
+#
+# EOH
+[Unit]
+Description=Lab OOM Java - Scenario %i
+Documentation=https://www.freedesktop.org/software/systemd/man/latest/systemd.unit.html
+Documentation=https://www.freedesktop.org/software/systemd/man/systemd.service.html
+Documentation=https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html
+After=network.target
+StartLimitIntervalSec=30
+StartLimitBurst=3
+
+[Service]
+# Type=forking | simple | oneshot | dbus | notify | idle
+Type=simple
+User=${user.name}
+
+WorkingDirectory=${project.basedir}
+# Execute pre and post scripts as root:
+PermissionsStartOnly=false
+#
+# We use the %i to pass the scenario (heap, metaspace, etc.)
+#ExecStart=/usr/bin/mvn -f ${project.basedir}/pom.xml exec:exec -Poom -Doom.scenario=%i
+#ExecStart=/usr/bin/mvn exec:exec -Poom -Doom.scenario=%i
+ExecStart=/usr/local/bin/mvn exec:exec -Poom -Doom.scenario=%i
+
+SuccessExitStatus=0 143
+TimeoutStartSec=300
+TimeoutStopSec=300
+TimeoutSec=300
+#
+RemainAfterExit=no
+PrivateTmp=false
+
+#
+# --- Configuration to validate ---
+#RestartPreventExitStatus=1
+# always | on-failure
+Restart=on-failure
+RestartSec=5s
+
+LimitNOFILE=5000
+#
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jvm-oom-%i
+
+[Install]
+WantedBy=multi-user.target
+#Alias=oom@.service testoom@.service
+
+# EOF
