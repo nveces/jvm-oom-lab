@@ -1,0 +1,120 @@
+= JVM OOM Lab
+:toc:
+:toclevels: 2
+
+This repository is a small lab to reproduce and observe JVM OutOfMemoryError scenarios,
+including execution through a `systemd` template service.
+
+NOTE: Commands are shown with `$` as a shell prompt. Do not type `$` when running them.
+
+== Main workflow
+
+=== 1) Run tests with Maven (OOM profile)
+
+Run the project build and OOM scenario execution with the `oom` profile:
+
+[source,bash,subs="attributes",options=nowrap]
+----
+$ mvn clean package -Poom -Doom.scenario=<scenario_name>
+----
+
+Available scenario values are documented in the table below.
+
+=== Scenario names reference
+
+[cols="1,2,2,4",options="header"]
+|===
+| Property (`pom.xml`)
+| `scenario_name`
+| `ScenarioType` enum
+| Expected OOM message
+
+| `oom.scenario.01`
+| `heap-space`
+| `HEAP_SPACE`
+| `java.lang.OutOfMemoryError: Java heap space`
+
+| `oom.scenario.02`
+| `metaspace`
+| `METASPACE`
+| `java.lang.OutOfMemoryError: Metaspace`
+
+| `oom.scenario.03`
+| `unable-create-thread`
+| `UNABLE_CREATE_THREAD`
+| `java.lang.OutOfMemoryError: unable to create new native thread`
+
+| `oom.scenario.04`
+| `direct-buffer`
+| `DIRECT_BUFFER`
+| `java.lang.OutOfMemoryError: Direct buffer memory`
+
+| `oom.scenario.05`
+| `requested-array-size`
+| `REQUESTED_ARRAY_SIZE`
+| `java.lang.OutOfMemoryError: Requested array size exceeds VM limit`
+
+| `oom.scenario.06`
+| `gc-overhead`
+| `GC_OVERHEAD`
+| `java.lang.OutOfMemoryError: GC overhead limit exceeded`
+|===
+
+=== 2) Generate the systemd service file (systemd profile)
+
+Create the filtered service unit using the `systemd` profile:
+
+[source,bash,subs="attributes",options=nowrap]
+----
+$ mvn clean process-resources -Psystemd
+----
+
+Expected output file:
+
+* `target/systemd-config/jvm-oom@.service`
+
+=== 3) Install the generated service
+
+Use the installation script from the project root:
+
+[source,bash,subs="attributes",options=nowrap]
+----
+$ cd src/test/systemd/bin
+$ sudo ./10-install-svc.sh
+----
+
+=== 4) Run a scenario through systemd
+
+Start the template service instance with a scenario name:
+
+[source,bash,subs="attributes",options=nowrap]
+----
+$ sudo systemctl start jvm-oom@<scenario_name>
+----
+
+=== 5) Follow service logs with journalctl
+
+Use the log helper script:
+
+[source,bash,subs="attributes",options=nowrap]
+----
+$ cd src/test/systemd/bin
+$ ./20-log-journalctl.sh
+----
+
+=== 6) Uninstall the service
+
+Run the cleanup script:
+
+[source,bash,subs="attributes",options=nowrap]
+----
+$ cd src/test/systemd/bin
+$ sudo ./xx-10-uninstall-svc.sh
+----
+
+== Notes
+
+* The service template name is `jvm-oom@.service`.
+* For `systemctl start jvm-oom@<scenario_name>`, use the same scenario names accepted by the Java app (for example `heap-space` or `metaspace`).
+
+// EOF
