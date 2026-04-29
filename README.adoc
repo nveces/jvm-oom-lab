@@ -20,6 +20,7 @@ $ mvn clean package -Poom -Doom.scenario=<scenario_name>
 
 Available scenario values are documented in the table below.
 
+[[scenario-names-reference]]
 === Scenario names reference
 
 [cols="1,2,2,4",options="header"]
@@ -87,10 +88,12 @@ $ sudo ./10-install-svc.sh
 
 Start the template service instance with a scenario name:
 
-[source,bash,subs="attributes",options=nowrap]
+[source,bash,subs="attributes,callouts",options=nowrap]
 ----
-$ sudo systemctl start jvm-oom@<scenario_name>
+$ sudo systemctl start jvm-oom@&lt;scenario_name&gt; <1>
 ----
+
+<1> See <<scenario-names-reference,Scenario names reference>>.
 
 === 5) Follow service logs with journalctl
 
